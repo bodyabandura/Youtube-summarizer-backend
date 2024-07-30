@@ -30,6 +30,7 @@ def get_video_title(url):
 
 def get_video_thumbnail(url):
     try:
+        print("9.1")
         return YouTube(url).thumbnail_url
     except Exception as e:
         print(f"{_ERROR}\n{e}")

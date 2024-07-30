@@ -5,146 +5,54 @@ from audio_utils import *
 
 
 def generate_summary(data):
-    # user = db['users']
-    # existing_user = user.find_one({"email": email})
-    # if len(existing_user['summary']) >= 150:
-    #     return jsonify({'msg': "150 is limitation to generate new summary"}), 409
-
-    # if existing_user:
-    #     for data in existing_user['summary']:
-    #         if data['url'] == video_id:
-    #             return {
-    #                 'video_title': data['data']['video_title'],
-    #                 'url': video_id,
-    #                 'isExist': True
-    #             }
-
     url_, email = data['url'], data['email']
 
     try:
         yt = YouTube(url_)
+        print("1")
         audio_stream = yt.streams.filter(only_audio=True).first()
 
+        print("2")
         video_title = get_video_title(url_)
         print(f'The title of the video is: {video_title}')
+        print("3")
 
-        output_path = "YoutubeAudios"
-        filename = "audio.mp3"
+        output_path, filename = "YoutubeAudios", "audio.mp3"
 
         audio_stream.download(output_path=output_path, filename=filename)
+        print("4")
+
         audio_url = output_path + "/" + filename
+        print("5")
 
         transcribed_text = transcribe_audio(audio_url)
-        print(transcribed_text)
+        print("6")
 
         with open("audio_text.txt", 'w') as f:
             f.write(transcribed_text)
+        print(transcribed_text)
+        print("7")
 
         final_summary = summarize_text()
+        print("8")
 
         with open('summary.txt', 'w', encoding='utf-8') as summary_f:
             summary_f.write(final_summary)
+        print("9")
 
         thumbnail = get_video_thumbnail(url_)
-
-        return {
-            "video_title": video_title,
-            "thumbnail": thumbnail,
-            "content": final_summary,
-            "url": url_
-        }
+        print("10")
     except Exception as e:
         return {
             "message": f"An error occured in generate_summary: {e}"
         }
 
-        # if file_bigger_than_25mb(audio_url):
-        #     print("long text exception")
-        #     thumbnail = get_video_thumbnail(video_url)
-        #     new_summary = {
-        #         'video_title': video_title,
-        #         'thumbnail': thumbnail,
-        #         'content': LONG_TEXT_SUMMARY
-        #     }
-    #
-    #         result = user.update_one({
-    #             "email": email
-    #         },
-    #             {
-    #                 "$push": {
-    #                     "summary": {
-    #                         'data': new_summary,
-    #                         'url': video_id,
-    #                         'isExist': False
-    #                     }
-    #                 }
-    #             }
-    #         )
-    #         return {
-    #             'video_title': video_title,
-    #             'url': video_id
-    #         }
-    #
-
-
-
-    #
-    #     result = user.update_one(
-    #         {
-    #             "email": email
-    #         },
-    #         {
-    #             "$push":
-    #                 {
-    #                     "summary":
-    #                         {
-    #                             'data': new_summary,
-    #                             'url': video_id,
-    #                             'isExist': False
-    #                         }
-    #                 }
-    #         }
-    #     )
-    #     return {
-    #         'video_title': video_title,
-    #         'url': video_id
-    #     }
-    # else:
-    #     print("YouTubeAPI")
-    #     text = YouTubeTranscriptApi.get_transcript(video_id)
-    #     # transcribed_text = ' '.join(entry['text'] for entry in text)
-    #
-    #     with open(AUDIO_TEXT_TXT, 'w') as f:
-    #         f.write(url)
-    #
-    #     final_summary = summarize_text()
-    #
-    #     with open(SUMMARY_TXT, 'w', encoding='utf-8') as summary_file:
-    #         summary_file.write(final_summary)
-    #
-    #     thumbnail = get_video_thumbnail(url)
-
-        # new_summary = {'video_title': video_title, 'thumbnail': thumbnail, 'content': final_summary}
-
-        # result = user.update_one(
-        #     {
-        #         "email": email
-        #     },
-        #     {
-        #         "$push": {
-        #             "summary": {
-        #                 'data': new_summary,
-        #                 'url': video_id,
-        #                 'isExist': False
-        #             }
-        #         }
-        #     }
-        # )
-
-        # return {
-        #     'video_title': video_title,
-        #     'url': video_id
-        # }
+    return {
+        "video_title": video_title,
+        "thumbnail": thumbnail,
+        "content": final_summary,
+        "url": url_
+    }
 
 
 def get_or_create_assistant():
@@ -154,7 +62,6 @@ def get_or_create_assistant():
             if assistant_id:
                 return assistant_id
 
-    # Create a new assistant if not already created
     assistant = openai_app.beta.assistants.create(
         name="Video summarizer",
         tools=[{'type': 'file_search'}],
@@ -173,29 +80,38 @@ def get_or_create_assistant():
 def summarize_text():
     with open(AUDIO_TEXT_TXT, 'r') as f:
         content = f.read()
-
+    print("7.1")
     assistant_id = get_or_create_assistant()
+    print("7.2")
+
     thread = openai_app.beta.threads.create()
+    print("7.3")
 
     message = openai_app.beta.threads.messages.create(
         thread_id=thread.id,
         role="user",
         content=content
     )
+    print("7.4")
 
     run = openai_app.beta.threads.runs.create(
         thread_id=thread.id,
         assistant_id=assistant_id,
     )
+    print("7.5")
 
     while run.status != "completed":
         run = openai_app.beta.threads.runs.retrieve(
             thread_id=thread.id,
             run_id=run.id
         )
+    print("7.6")
 
     all_messages = openai_app.beta.threads.messages.list(thread_id=thread.id)
+    print("7.7")
+
     assistant = all_messages.data[0].content[0].text.value
+    print("7.8")
 
     print(f"User: {message.content[0].text.value}")
     print(f"Assistant: {assistant}")
